@@ -1,0 +1,133 @@
+#!/bin/bash
+
+set -x
+
+# Program to install docker and docker compose
+
+DOCKER_URL="https://download.docker.com/linux/centos/docker-ce.repo"
+COMPOSE_URL="https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)"
+
+# Install Docker
+
+sudo yum install -y yum-utils device-mapper-persistent-data lvm2 \
+&& sudo yum-config-manager --add-repo $DOCKER_URL \
+&& sudo yum install docker-ce \
+&& sudo systemctl start docker.service \
+
+# Install Docker Compose
+
+sudo curl -L "$COMPOSE_URL" -o /usr/local/bin/docker-compose \
+&& sudo chmod +x /usr/local/bin/docker-compose \
+&& docker-compose --version \
+
+# Apache with port 8080
+
+cd \
+&& mkdir ./dc_apache \
+&& mkdir ./dc_apache/files \
+&& cd ./dc_apache/files \
+&& cat > index.html <<- _EOF_
+<HTML>
+<HEAD>
+<TITLE>Apache 8080</TITLE>
+</HEAD>
+<BODY>
+Hi Apache.
+</BODY>
+</HTML>
+_EOF_
+
+chmod +x index.html \
+&& cd .. \
+&& cat > Dockerfile <<- _EOF_
+        FROM httpd:2.4
+        WORKDIR /var/www/html
+        COPY ./files/ /var/www/html
+_EOF_
+
+chmod +x Dockerfile \
+&& cat > docker-compose.yml <<- _EOF_
+        version: '3'
+
+        services:
+          web:
+	    build: .
+            image: httpd:2.4
+            ports:
+              - 8080:80
+            volumes:
+              - ./files:/var/www/html
+_EOF_
+
+chmod +x docker-compose.yml \
+&& docker-compose up \
+&& echo "Visit http://localhost:8080/ and check if it works properly." \
+&& read -e -p "Press Enter to continue > " \
+
+# Nginx with port 80
+
+cd \
+&& mkdir ./dc_nginx \
+&& mkdir ./dc_nginx/files \
+&& cd ./dc_nginx/files \
+&& cat > index.html <<- _EOF_
+<HTML>
+<HEAD>
+<TITLE>Nginx 80</TITLE>
+</HEAD>
+<BODY>
+Hi Nginx.
+</BODY>
+</HTML>
+_EOF_
+
+chmod +x index.html \
+&& cd .. \
+&& cat > Dockerfile <<- _EOF_
+        FROM nginx
+        WORKDIR /usr/share/nginx/html
+        COPY ./files/ /usr/share/nginx/html
+_EOF_
+
+chmod +x Dockerfile \
+&& cat > docker-compose.yml <<- _EOF_
+        version: '3'
+
+        services:
+          nginx:
+            image: nginx:1.13
+            ports:
+             -  "80:80"
+            volumes:
+              - ./files:/usr/share/nginx/html
+_EOF_
+
+chmod +x docker-compose.yml \
+&& docker-compose up \
+&& echo "Visit http://localhost:80 and check if it works properly." \
+&& read -e -p "Press Enter to continue > " \
+
+# MariaDB with port 3306
+
+cd \
+&& mkdir ./dc_mariadb \
+&& mkdir ./dc_mariadb/mariadb \
+&& cat > docker-compose.yml <<- _EOF_
+        version: '3'
+
+        services:
+          mariadb:
+            image: mariadb:10.3
+            restart: always
+            volumes:
+              - ./mariadb:/var/lib/mysql
+            environment:
+              MYSQL_ROOT_PASSWORD: qwerty
+            ports:
+              - 3306:3306
+_EOF_
+
+chmod +x docker-compose.yml \
+&& docker-compose up \
+&& echo "Access this MySQL container with the following details and check how it works: MYSQL_ROOT_PASSWORD: qwerty \
+&& read -e -p "Press Enter to end the work of the script > " \
