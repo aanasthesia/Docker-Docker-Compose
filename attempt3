@@ -1,0 +1,64 @@
+#!/bin/bash
+
+set -x
+
+DOCKER_URL="https://download.docker.com/linux/centos/docker-ce.repo"
+COMPOSE_URL="https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)"
+
+sudo yum install -y yum-utils device-mapper-persistent-data lvm2
+sudo yum-config-manager --add-repo $DOCKER_URL
+sudo yum install -y docker-ce
+sudo systemctl start docker.service
+sudo curl -L "$COMPOSE_URL" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose --version
+cd
+mkdir dc_apache dc_nginx dc_mariadb dc_apache/files dc_nginx/files dc_mariadb/mariadb
+cd dc_apache
+cat > ./files/index.html <<- _EOF_
+Hi, I am Apache
+_EOF_
+cat > docker-compose.yml <<- _EOF_
+        version: '3'
+        services:
+          apache:
+            image: httpd:2.4
+            ports:
+              - 8080:80
+            volumes:
+              - ./files:/usr/local/apache2/htdocs
+_EOF_
+docker-compose up -d
+cd
+cd dc_nginx
+cat > ./files/index.html <<- _EOF_
+Hi, I am Nginx
+_EOF_
+cat > docker-compose.yml <<- _EOF_
+        version: '3'
+        services:
+          nginx:
+            image: nginx:1.13
+            ports:
+             -  80:80
+            volumes:
+              - ./files:/usr/share/nginx/html
+_EOF_
+docker-compose up -d
+cd
+cd dc_mariadb
+cat > docker-compose.yml <<- _EOF_
+        version: '3'
+        services:
+          mariadb:
+            image: mariadb:10.3
+            restart: always
+            volumes:
+              - ./mariadb:/var/lib/mysql
+            environment:
+              MYSQL_ROOT_PASSWORD: qwerty
+              MYSQL_DATABASE: db_test
+            ports:
+              - 3306:3306
+_EOF_
+docker-compose up -d
